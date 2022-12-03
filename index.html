@@ -17,65 +17,73 @@
     </style>
   </head>
   <body>
-    <div style="display: flex;">
+    Enter Input Source Stream URL 
+      <input id="app"></input>
+    Enter Output Source Stream URL <input id="source"></input>
+
+    <button onclick="pushVideo()">PUSH</button>
+    <div style="display: flex">
       <div>
         <h3>Input</h3>
         <video id="input_player" width="800px" loop controls autoplay></video>
       </div>
+      
       &nbsp;
       <div>
         <h3>Output</h3>
         <div id="output_player"></div>
       </div>
     </div>
+  
     <script src="./ovenplayer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ovenlivekit@latest/dist/OvenLiveKit.min.js"></script>
 
     <!-- Input Video Script -->
     <script>
-      let ovenLivekit = OvenLiveKit.create();
+      function pushVideo(){
+        let ovenLivekit = OvenLiveKit.create();
+        let app = document.getElementById('app').value
+        let source = document.getElementById('source').value
 
-      ovenLivekit.attachMedia(document.getElementById("input_player"));
-      
-      ovenLivekit
-        .getUserMedia({
-          audio: false,
-          video: true,
-        })
-        .then(function (stream) {
-          // Or set your OvenMediaEngine's WebRTC Provider URL
-          // const connectionConfig = {
-          //   iceServers : null ,
-          //   iceTransportPolicy: null,
-          //   maxBitrate: null
-          // }
-          ovenLivekit.startStreaming(
-            "ws://imn.multiplierapp.live/imlive/conference?direction=send&transport=tcp"
-          );
-        }).catch(err=>{
-          alert(err)
-        });
+
+        ovenLivekit.attachMedia(document.getElementById("input_player"));
+
+        ovenLivekit
+          .getUserMedia({
+            audio: false,
+            video: true,
+            scren:false,
+          })
+          .then(function (stream) {
+            // Or set your OvenMediaEngine's WebRTC Provider URL
+            const connectionConfig = {
+              // iceServers: null,
+              // iceTransportPolicy: null,
+              // maxBitrate: null,
+              // credential: "dhruvpatel"
+            };
+            ovenLivekit.startStreaming(`ws://imn.multiplierapp.live:3333/${app}/${source}?direction=send&transport=tcp`);
+          })
+          .catch((err) => {
+            alert(err);
+          });
+
+          const player = OvenPlayer.create("output_player", {
+            sources: [
+              {
+                autoStart: true,
+                loop: true,
+                type: "webrtc", // 'mp4', 'webm','hls' or etc
+                file: `ws://imn.multiplierapp.live:3333/${app}/${source}`, //"http://techslides.com/demos/sample-videos/small.mp4",
+                config: {},
+              },
+            ],
+          });
+    } 
+  
     </script>
 
     <!-- Output Video Script -->
-    <script>
-      const player = OvenPlayer.create("output_player", {
-        sources: [
-          {
-            // title:"Target Stream",
-            // label: "label_for_video",
-            // image:""                             //Thumbnail for video
-            // waterMark: {
-            // },
-            autoStart: true,
-            loop: true,
-            type: "webrtc", // 'mp4', 'webm','hls' or etc
-            file: "ws://imn.multiplierapp.live:3333/imlive/conference", //"http://techslides.com/demos/sample-videos/small.mp4",
-            config: {},
-            // webrtcConfig:{}
-          },
-        ],
-      });
-    </script>
+  
   </body>
 </html>
