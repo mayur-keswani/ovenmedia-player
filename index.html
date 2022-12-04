@@ -1,89 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC to WebRTC</title>
-    <style>
-      #output_player {
-        height: 400px;
-        width: 700px;
-      }
-      #input_player {
-        height: 400px;
-        width: 700px;
-      }
-    </style>
-  </head>
-  <body>
-    Enter Input Source Stream URL 
-      <input id="app"></input>
-    Enter Output Source Stream URL <input id="source"></input>
 
-    <button onclick="pushVideo()">PUSH</button>
-    <div style="display: flex">
-      <div>
-        <h3>Input</h3>
-        <video id="input_player" width="800px" loop controls autoplay></video>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebRTC to WebRTC</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    #output_player {
+      margin: 1rem;
+      height: 400px;
+      width: 700px;
+    }
+
+    #input_player {
+      margin: 1rem;
+      height: 400px;
+      width: 700px;
+    }
+
+    .danger {
+      background-color: red;
+      color: #f1f1f1;
+    }
+
+    .success {
+      background-color: green;
+      color: #f1f1f1;
+    }
+
+    .info {
+      background-color: yellow;
+      color: #f1f1f1;
+    }
+
+    fieldset {
+      padding-left: 0.5rem;
+      padding-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .list-group-item {
+      padding: 0.5rem 1rem;
+    }
+
+    .list-group-item h6 {
+      margin-top: 0.5rem;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div class="">
+    <div class="row m-2 g-3">
+      <div class="col col-lg-8">
+        <label class="form-label" for="webRtcUrlInput">WebRTC input URL</label>
+        <input id="input" class="form-control bg-white"></input>
       </div>
-      
-      &nbsp;
-      <div>
-        <h3>Output</h3>
-        <div id="output_player"></div>
+      <div class="col col-lg-4">
+        <button type="button" class="btn btn-primary px-2 px-md-4 mt-1" id="streamingButton"
+          onclick="streamHandler()">Push Stream</button>
       </div>
     </div>
-  
-    <script src="./ovenplayer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ovenlivekit@latest/dist/OvenLiveKit.min.js"></script>
+  </div>
 
-    <!-- Input Video Script -->
-    <script>
-      function pushVideo(){
-        let ovenLivekit = OvenLiveKit.create();
-        let app = document.getElementById('app').value
-        let source = document.getElementById('source').value
+  <div class="m-2">
+    Status : <span class="status">N/A</span>
+  </div>
+
+  <!-- CONFIGURATION -->
+  <div class="m-2">
+    <ul class="list-group">
+      <li class="list-group-item bg-light">
+        <h5 class="mb-0 fs-6">Input stream settings</h5>
+      </li>
+      <li class="list-group-item">
+        <div class="row">
+          <div class="col-lg-6 border-start border-2 mb-3 mb-lg-0">
+            <h6>Video settings</h6>
+            <fieldset>
+              <label for="videoSourceSelect">Select Camera</label>
+              <select name="" id="videoSourceSelect" class="form-control constraintSelect mb-2">
+              </select>
+              <label for="videoResolutionSelect">Resolution</label>
+              <select id="videoResolutionSelect" class="form-control constraintSelect mb-2">
+                <option selected value="">Not Set</option>
+                <option value="fhd">Full HD (1920x1080)</option>
+                <option value="hd">HD (1280x720)</option>
+                <option value="vga">VGA (640x480)</option>
+              </select>
 
 
-        ovenLivekit.attachMedia(document.getElementById("input_player"));
+            </fieldset>
+          </div>
+        </div>
 
-        ovenLivekit
-          .getUserMedia({
-            audio: false,
-            video: true,
-            scren:false,
-          })
-          .then(function (stream) {
-            // Or set your OvenMediaEngine's WebRTC Provider URL
-            const connectionConfig = {
-              // iceServers: null,
-              // iceTransportPolicy: null,
-              // maxBitrate: null,
-              // credential: "dhruvpatel"
-            };
-            ovenLivekit.startStreaming(`ws://imn.multiplierapp.live:3333/${app}/${source}?direction=send&transport=tcp`);
-          })
-          .catch((err) => {
-            alert(err);
-          });
+      </li>
+    </ul>
+  </div>
 
-          const player = OvenPlayer.create("output_player", {
-            sources: [
-              {
-                autoStart: true,
-                loop: true,
-                type: "webrtc", // 'mp4', 'webm','hls' or etc
-                file: `ws://imn.multiplierapp.live:3333/${app}/${source}`, //"http://techslides.com/demos/sample-videos/small.mp4",
-                config: {},
-              },
-            ],
-          });
-    } 
-  
-    </script>
 
-    <!-- Output Video Script -->
-  
-  </body>
+  <div class="d-flex m-2 ">
+    <div>
+      <h3>Input</h3>
+      <video id="input_player" width="800px" loop controls autoplay></video>
+    </div>
+
+    &nbsp;
+    <div>
+      <h3>Output</h3>
+      <div id="output_player"></div>
+    </div>
+  </div>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"
+    integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+    crossorigin="anonymous"></script>
+  <script src="./ovenplayer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ovenlivekit@latest/dist/OvenLiveKit.min.js"></script>
+
+
+  <script>
+    let ovenLivekit;
+    let status = document.querySelector('.status')
+    let streamingStarted = false
+    let config = {
+      callbacks: {
+        error: function (error) {
+          status.innerHTML = "Error"
+          status.classList.add("danger")
+        },
+        connected: function (event) {
+          status.innerHTML = "Connected"
+          status.classList.add("success")
+        },
+        connectionClosed: function (type, event) {
+          status.innerHTML = "Connection Cloased"
+          status.classList.add("info")
+        },
+      }
+    }
+
+
+    function createInstance() {
+      ovenLivekit = OvenLiveKit.create(config);
+      ovenLivekit.attachMedia(document.getElementById("input_player"));
+    }
+
+
+    function getUserConstraints() {
+      let videoDeviceId = document.querySelector('#videoSourceSelect').value
+      let newConstraint = {
+        audio: true,
+        video: true
+      }
+      if (videoDeviceId) {
+        newConstraint.video = {
+          deviceId: {
+            exact: videoDeviceId
+          }
+        };
+      }
+    }
+
+    async function getStream() {
+      let stream;
+      try {
+        stream = await ovenLivekit
+          .getUserMedia(getUserConstraints())
+      } catch (err) {
+        console.log(err)
+      }
+      return stream
+    }
+
+    createInstance()
+    var stream = getStream()
+
+
+    function startStreaming() {
+      streamingStarted = true;
+      let streamingButton = document.querySelector('#streamingButton')
+      streamingButton.innerHTML = "Stop Stream"
+      console.log(streamingButton.classList)
+      streamingButton.classList.remove("btn-primary");
+      streamingButton.classList.add("btn-danger");
+
+      let inputURL = document.getElementById('input').value;
+      stream
+        .then(function (stream) {
+          ovenLivekit.startStreaming(inputURL);
+        })
+        .catch((err) => {
+          alert(err);
+        });
+
+      let outputURL = inputURL.split('?')[0];
+      const player = OvenPlayer.create("output_player", {
+        sources: [
+          {
+            autoStart: true,
+            loop: true,
+            type: "webrtc", // 'mp4', 'webm','hls' or etc
+            file: outputURL, //"http://techslides.com/demos/sample-videos/small.mp4",
+            config: {},
+          },
+        ],
+      });
+    }
+
+    function stopStreaming() {
+      streamingStarted = false;
+      streamingButton.classList.remove('btn-danger')
+      streamingButton.classList.add('btn-primary');
+      streamingButton.innerHTML = 'Start Stream';
+      ovenLivekit.remove();
+      // ovenLivekit = null;
+    }
+
+    function streamHandler() {
+      if (!streamingStarted) {
+        startStreaming();
+      } else {
+        stopStreaming();
+      }
+    }
+  </script>
+
+
+</body>
+
 </html>
