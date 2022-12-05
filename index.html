@@ -138,7 +138,9 @@
   <script>
     let ovenLivekit;
     let status = document.querySelector('.status')
-    let streamingStarted = false
+    let streamingStarted = false;
+    let videoSourceSelect = document.getElementById('videoSourceSelect')
+
     let config = {
       callbacks: {
         error: function (error) {
@@ -157,14 +159,16 @@
     }
 
 
+
     function createInstance() {
       ovenLivekit = OvenLiveKit.create(config);
       ovenLivekit.attachMedia(document.getElementById("input_player"));
     }
 
 
+
     function getUserConstraints() {
-      let videoDeviceId = document.querySelector('#videoSourceSelect').value
+      let videoDeviceId = videoSourceSelect.value
       let newConstraint = {
         audio: true,
         video: true
@@ -176,7 +180,33 @@
           }
         };
       }
+      return newConstraint
     }
+
+    function getDevices() {
+      // let videoSourceSelect=document.getElementById('videoSourceSelect')
+      try {
+        OvenLiveKit.getDevices().then(function (devices) {
+
+
+          let videoInputSource = (devices.videoinput)
+          videoInputSource.map(device => {
+            let option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label;
+            videoSourceSelect.appendChild(option);
+          })
+          // streamingButton.prop('disabled', false);
+        });
+      } catch (error) {
+        console.log(error)
+        let option = document.createElement('option');
+        option.value = null;
+        option.innerHTML = "--- No Source Available ---";
+        videoSourceSelect.appendChild(opt);
+      }
+    }
+
 
     async function getStream() {
       let stream;
@@ -189,8 +219,10 @@
       return stream
     }
 
+    getDevices()
     createInstance()
     var stream = getStream()
+
 
 
     function startStreaming() {
@@ -240,6 +272,13 @@
         stopStreaming();
       }
     }
+
+    videoSourceSelect.addEventListener('click', () => {
+      videoSourceSelect.addEventListener('change', () => {
+
+        getStream()
+      })
+    })
   </script>
 
 
