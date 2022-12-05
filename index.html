@@ -140,6 +140,7 @@
     let status = document.querySelector('.status')
     let streamingStarted = false;
     let videoSourceSelect = document.getElementById('videoSourceSelect')
+    let videoResolutionSelect = document.getElementById('videoResolutionSelect')
 
     let config = {
       callbacks: {
@@ -168,7 +169,26 @@
 
 
     function getUserConstraints() {
-      let videoDeviceId = videoSourceSelect.value
+      const userResolutions = {
+        vga: {
+          // width: {exact: 640}, height: {exact: 480}
+          // width: { min: 0, ideal: 640}, height: { min: 0, ideal: 480 }
+          width: { ideal: 640 }, height: { ideal: 480 }
+        },
+        hd: {
+          // width: {exact: 1280}, height: {exact: 720}
+          // width: { min: 640, ideal: 1280}, height: { min: 480, ideal: 720 }
+          width: { ideal: 1280 }, height: { ideal: 720 }
+        },
+        fhd: {
+          // width: {exact: 1920}, height: {exact: 1080}
+          // width: { min: 1280, ideal: 1920}, height: { min: 720, ideal: 1080 }
+          width: { ideal: 1920 }, height: { ideal: 1080 }
+        }
+      };
+
+      let videoDeviceId = videoSourceSelect.value;
+      let videoResolution = videoResolutionSelect.value;
       let newConstraint = {
         audio: true,
         video: true
@@ -179,6 +199,13 @@
             exact: videoDeviceId
           }
         };
+      }
+      if (videoResolution) {
+
+        const resolution = userResolutions[videoResolution];
+
+        newConstraint.video.width = resolution.width;
+        newConstraint.video.height = resolution.height;
       }
       return newConstraint
     }
@@ -275,7 +302,12 @@
 
     videoSourceSelect.addEventListener('click', () => {
       videoSourceSelect.addEventListener('change', () => {
+        getStream()
+      })
+    })
 
+    videoResolutionSelect.addEventListener('click', () => {
+      videoResolutionSelect.addEventListener('change', () => {
         getStream()
       })
     })
