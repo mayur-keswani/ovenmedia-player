@@ -16,16 +16,27 @@
       overflow-x: hidden;
     }
 
+    .outputPlayerWrapper {
+      width: 100%;
+      box-sizing: border-box;
+      /* padding: 1rem; */
+
+    }
+
     #output_player {
-      margin: 1rem;
       height: 400px;
-      width: 700px;
+      width: 100%;
+    }
+
+    .inputPlayerWrapper {
+      width: 100%;
+      box-sizing: border-box;
+      /* padding: 1rem; */
     }
 
     #input_player {
-      margin: 1rem;
       height: 400px;
-      width: 700px;
+      width: 100%;
     }
 
     .danger {
@@ -40,7 +51,7 @@
 
     .info {
       background-color: yellow;
-      color: #f1f1f1;
+      color: #080808;
     }
 
     fieldset {
@@ -63,20 +74,14 @@
 <body>
   <div class="">
     <div class="row m-2 g-3">
-      <div class="col col-lg-8">
+      <div class="col col-lg-8 col-sm-12">
         <label class="form-label" for="webRtcUrlInput">WebRTC input URL</label>
         <input id="input" class="form-control bg-white"></input>
-      </div>
-      <div class="col col-lg-4">
-        <button type="button" class="btn btn-primary px-2 px-md-4 mt-1" id="streamingButton"
-          onclick="streamHandler()">Push Stream</button>
       </div>
     </div>
   </div>
 
-  <div class="m-2">
-    Status : <span class="status">N/A</span>
-  </div>
+
 
   <!-- CONFIGURATION -->
   <div class="m-2">
@@ -92,14 +97,21 @@
               <label for="videoSourceSelect">Select Camera</label>
               <select name="" id="videoSourceSelect" class="form-control constraintSelect mb-2">
               </select>
+
               <label for="videoResolutionSelect">Resolution</label>
               <select id="videoResolutionSelect" class="form-control constraintSelect mb-2">
-                <option selected value="">Not Set</option>
+                <option value="">Not Set</option>
                 <option value="fhd">Full HD (1920x1080)</option>
-                <option value="hd">HD (1280x720)</option>
+                <option value="hd" selected>HD (1280x720)</option>
                 <option value="vga">VGA (640x480)</option>
               </select>
 
+              <label for="videoBitrateInput">Bitrate limit (kbps)</label>
+              <input id="videoBitrateInput" type="number" class="form-control constraintSelect mb-2"
+                placeholder="Unlimited">
+
+              <label for="videoFrameInput">Frame rate</label>
+              <input id="videoFrameInput" type="number" class="form-control constraintSelect" placeholder="Not Set">
 
             </fieldset>
           </div>
@@ -110,17 +122,61 @@
   </div>
 
 
-  <div class="d-flex m-2 ">
-    <div>
+  <div class="d-flex justify-content-center">
+    <button type="button" class="btn btn-primary px-2 px-md-4 mt-1" id="streamingButton" onclick="streamHandler()">Push
+      Stream</button>
+  </div>
+
+
+
+  <!-- Video Players-->
+  <div class="d-flex flex-column">
+    <div class="m-2">
+      <h4>Status </h4>: <span id="streamStatus" class="status">N/A</span>
+    </div>
+    <div class="inputPlayerWrapper">
       <h3>Input</h3>
-      <video id="input_player" width="800px" loop controls autoplay></video>
+      <video id="input_player" loop controls autoplay></video>
     </div>
 
-    &nbsp;
-    <div>
+    <div class="outputPlayerWrapper">
       <h3>Output</h3>
       <div id="output_player"></div>
     </div>
+  </div>
+
+  <div id="streamInformationWrapper" class="m-2">
+    <ul class="list-group">
+      <li class="list-group-item bg-light">
+        <h5 class="mb-0 fs-6">Stream Information</h5>
+      </li>
+      <li class="list-group-item">
+        <div class="row">
+          <div class="col-lg-6 border-start border-2 mb-3 mb-lg-0">
+            <fieldset>
+              <div class="mb-2">
+                <span>Resolution
+                  <span class="badge badge-pill badge-info mr-1" data-mdb-toggle="tooltip"
+                    title="This may be different from the resolution you set. Because the browser will get the ideal resolution from the input device.">i</span>:
+                </span>
+                <span id="videoResolutionSpan" class="mr-2 align-middle">-</span>
+              </div>
+
+              <div class="mb-2">
+                <span>Framerate: </span>
+                <span id="videoFrameRateSpan" class="mr-2">-</span>
+              </div>
+
+              <div class="mb-2">
+                <span>Bitrate: </span>
+                <span id="bitrateSpan" class="mr-2">-</span>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+
+      </li>
+    </ul>
   </div>
 
 
@@ -137,33 +193,72 @@
 
   <script>
     let ovenLivekit;
-    let status = document.querySelector('.status')
+    var stream;
+    let status = document.querySelector('#streamStatus')
     let streamingStarted = false;
     let videoSourceSelect = document.getElementById('videoSourceSelect')
     let videoResolutionSelect = document.getElementById('videoResolutionSelect')
+    let videoBitrateInput = document.getElementById('videoBitrateInput');
+    let videoFrameInput = document.getElementById('videoFrameInput');
+
 
     let config = {
       callbacks: {
         error: function (error) {
           status.innerHTML = "Error"
-          status.classList.add("danger")
+          status.classList.toggle("danger")
         },
         connected: function (event) {
           status.innerHTML = "Connected"
-          status.classList.add("success")
+          status.classList.toggle("success")
         },
         connectionClosed: function (type, event) {
-          status.innerHTML = "Connection Cloased"
-          status.classList.add("info")
+          status.innerHTML = "Connection Closed"
+          status.classList.toggle("info")
         },
       }
     }
 
 
+    let frameCalculatorTimer = null;
+    let totalVideoFrames = 0;
+
+    function getResolutionAndCalculateFrame(videoElement) {
+
+      if (frameCalculatorTimer) {
+
+        clearInterval(frameCalculatorTimer);
+        videoResolutionSpan.innerHTML = ('N/A');
+        videoFrameRateSpan.innerHTML = 'N/A';
+        frameCalculatorTimer = null;
+        totalVideoFrames = 0;
+      }
+
+      frameCalculatorTimer = setInterval(function () {
+        // alert(videoElement.videoWidth)
+        videoResolutionSpan.innerHTML = (videoElement.videoWidth + 'x' + videoElement.videoHeight);
+
+        if (totalVideoFrames === 0) {
+
+          totalVideoFrames = videoElement.getVideoPlaybackQuality().totalVideoFrames;
+        } else {
+
+          let currentTotalFrame = videoElement.getVideoPlaybackQuality().totalVideoFrames;
+          let frameRate = currentTotalFrame - totalVideoFrames;
+
+          videoFrameRateSpan.innerHTML = (frameRate + 'fps');
+
+          totalVideoFrames = currentTotalFrame;
+        }
+
+      }, 1000);
+    }
 
     function createInstance() {
+      let videoElement = document.getElementById("input_player")
       ovenLivekit = OvenLiveKit.create(config);
-      ovenLivekit.attachMedia(document.getElementById("input_player"));
+      ovenLivekit.attachMedia(videoElement);
+      getResolutionAndCalculateFrame(videoElement);
     }
 
 
@@ -189,8 +284,9 @@
 
       let videoDeviceId = videoSourceSelect.value;
       let videoResolution = videoResolutionSelect.value;
+
       let newConstraint = {
-        audio: true,
+        audio: false,
         video: true
       }
       if (videoDeviceId) {
@@ -206,6 +302,11 @@
 
         newConstraint.video.width = resolution.width;
         newConstraint.video.height = resolution.height;
+      }
+
+      newConstraint.video.frameRate = { exact: (20) }
+      if (videoFrameInput.value) {
+        newConstraint.video.frameRate = { exact: +(videoFrameInput.value) }
       }
       return newConstraint
     }
@@ -246,41 +347,54 @@
       return stream
     }
 
-    getDevices()
-    createInstance()
-    var stream = getStream()
+    function initStream() {
+      getDevices()
+      createInstance()
+      stream = getStream()
+    }
+
+    initStream()
 
 
 
     function startStreaming() {
-      streamingStarted = true;
-      let streamingButton = document.querySelector('#streamingButton')
-      streamingButton.innerHTML = "Stop Stream"
-      console.log(streamingButton.classList)
-      streamingButton.classList.remove("btn-primary");
-      streamingButton.classList.add("btn-danger");
-
       let inputURL = document.getElementById('input').value;
-      stream
-        .then(function (stream) {
-          ovenLivekit.startStreaming(inputURL);
-        })
-        .catch((err) => {
-          alert(err);
-        });
+      if (inputURL) {
+        streamingStarted = true;
+        let streamingButton = document.querySelector('#streamingButton')
+        streamingButton.innerHTML = "Stop Stream"
+        console.log(streamingButton.classList)
+        streamingButton.classList.remove("btn-primary");
+        streamingButton.classList.add("btn-danger");
 
-      let outputURL = inputURL.split('?')[0];
-      const player = OvenPlayer.create("output_player", {
-        sources: [
-          {
-            autoStart: true,
-            loop: true,
-            type: "webrtc", // 'mp4', 'webm','hls' or etc
-            file: outputURL, //"http://techslides.com/demos/sample-videos/small.mp4",
-            config: {},
-          },
-        ],
-      });
+        let connectionConfig = {};
+        if (videoBitrateInput.value) {
+          connectionConfig.maxVideoBitrate = parseInt(videoBitrateInput.value);
+        }
+        stream
+          .then(function (stream) {
+            ovenLivekit.startStreaming(inputURL, connectionConfig);
+          })
+          .catch((err) => {
+            alert(err);
+          });
+
+        let outputURL = inputURL.split('?')[0];
+        const player = OvenPlayer.create("output_player", {
+          sources: [
+            {
+              autoStart: true,
+              loop: true,
+              type: "webrtc", // 'mp4', 'webm','hls' or etc
+              file: outputURL, //"http://techslides.com/demos/sample-videos/small.mp4",
+              config: {},
+            },
+          ],
+        });
+      } else {
+        alert("please enter input url")
+      }
+
     }
 
     function stopStreaming() {
@@ -290,6 +404,9 @@
       streamingButton.innerHTML = 'Start Stream';
       ovenLivekit.remove();
       // ovenLivekit = null;
+      status.innerHTML = ""
+      status.classList.toggle("")
+      initStream()
     }
 
     function streamHandler() {
@@ -299,6 +416,68 @@
         stopStreaming();
       }
     }
+
+    let lastResult;
+    setInterval(function () {
+      // alert(!!!ovenLivekit || !!!ovenLivekit.peerConnection)
+      if (!!!ovenLivekit || !!!ovenLivekit.peerConnection) {
+        bitrateSpan.innerHTML = ('N/A');
+        return;
+      }
+
+      let sender = null;
+
+      ovenLivekit.peerConnection.getSenders().forEach(function (s) {
+
+        if (s.track && s.track.kind === 'video') {
+          sender = s;
+        }
+      });
+
+      if (!sender) {
+        bitrateSpan.innerHTML = ('-');
+        return;
+      }
+
+      sender.getStats().then(res => {
+        res.forEach(report => {
+          let bytes;
+          let headerBytes;
+          let packets;
+
+          if (report.type === 'outbound-rtp') {
+            if (report.isRemote) {
+              return;
+            }
+
+            const now = report.timestamp;
+            bytes = report.bytesSent;
+            headerBytes = report.headerBytesSent;
+
+            packets = report.packetsSent;
+            if (lastResult && lastResult.has(report.id)) {
+              // calculate bitrate
+              const bitrate = 8 * (bytes - lastResult.get(report.id).bytesSent) /
+                (now - lastResult.get(report.id).timestamp);
+              const headerrate = 8 * (headerBytes - lastResult.get(report.id).headerBytesSent) /
+                (now - lastResult.get(report.id).timestamp);
+
+              const packetsSent = packets - lastResult.get(report.id).packetsSent;
+
+              bitrateSpan.innerHTML = (bitrate.toFixed(2) + 'kbps');
+            }
+
+            // console.log('framesEncoded', report.framesEncoded, 'keyFramesEncoded', report.keyFramesEncoded, report.framesEncoded / report.keyFramesEncoded + '(' + report.framesPerSecond + 'fps)')
+          }
+
+          if (report.type === 'track') {
+            // console.log(report)
+          }
+
+        });
+        lastResult = res;
+      });
+    }, 5000);
 
     videoSourceSelect.addEventListener('click', () => {
       videoSourceSelect.addEventListener('change', () => {
