@@ -121,13 +121,13 @@
 
                     <div class="col-lg-6 col-sm-12">
                       <label for="videoBitrateInput">Bitrate limit (kbps)</label>
-                      <input id="videoBitrateInput" type="number" value="200000" class="form-control constraintSelect"
+                      <input id="videoBitrateInput" type="number" value="2500" class="form-control constraintSelect"
                         placeholder="Unlimited">
                     </div>
 
                     <div class="col-lg-6 col-sm-12">
                       <label for="videoFrameInput">Frame rate</label>
-                      <input id="videoFrameInput" type="number" value="20" class="form-control constraintSelect"
+                      <input id="videoFrameInput" type="number" value="30" class="form-control constraintSelect"
                         placeholder="Not Set">
                     </div>
                     <div class="col-lg-6 col-sm-12">
@@ -145,7 +145,7 @@
                         <input type="number" id="webrtcLoadingTimeout" class="form-control active" value="10000">
                       </div>
                       <div class="form-outline ms-4">
-                        <label class="form-label" for="webrtcLoadingRetryCount" >Retry count</label>
+                        <label class="form-label" for="webrtcLoadingRetryCount">Retry count</label>
                         <input type="number" id="webrtcLoadingRetryCount" class="form-control active" value="4">
                       </div>
                     </div>
@@ -471,23 +471,23 @@
       if (webrtcLoadingRetryCount.value) {
         webrtcConfig['timeoutMaxRetry'] = +webrtcLoadingRetryCount.value
       }
-      
+
       outputPlayer = OvenPlayer.create("output_player", {
-        sources: [
-          {
-            autoStart: true,
-            autoFallback: true,
-            loop: true,
-            type: "webrtc", // 'mp4', 'webm','hls' or etc
-            file: outputURL, //"http://techslides.com/demos/sample-videos/small.mp4",
-            config: {},
-          },
-        ],
-        webrtcConfig: webrtcConfig
-      });
+
+        "autoStart": true,
+        "autoFallback": true,
+        "mute": false,
+        "type": "webrtc", // 'mp4', 'webm','hls' or etc
+        "sources": [{
+          "type": 'webrtc',
+          "file": outputURL, //"http://techslides.com/demos/sample-videos/small.mp4",
+        }],
+        "webrtcConfig": webrtcConfig
+      },
+
+      );
 
       outputPlayer.once('error', function (e) {
-        console.log(e);
         if (reloadTimer) {
           clearInterval(this.reloadTimer);
           this.reloadTimer = null;
@@ -551,7 +551,6 @@
 
     let lastResult;
     setInterval(function () {
-      // alert(!!!ovenLivekit || !!!ovenLivekit.peerConnection)
       if (!!!ovenLivekit || !!!ovenLivekit.peerConnection) {
         bitrateSpan.innerHTML = ('N/A');
         return;
